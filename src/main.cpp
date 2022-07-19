@@ -90,15 +90,13 @@ void read_port()
                     //printf("is extended frame: %d\n", (int)is_extended_frame);
                     auto print_frame = [](struct can_frame frame) {
                         printf("id = 0x%08X,  dlc = %d, data = 0x ", frame.can_id & 0x1FFFFFFFu, frame.can_dlc);
-                        for (int i=0; i<8; i++) {
+                        for (int i = 0; i < 8; i++) {
                             //printf("%.2X ", frame.data[i]);
                             printf("%02X ", frame.data[i]);
                         }
                         printf("\n");
-
                     };
                     print_frame(frame_rd);
-                    
                 }
             }
         }
@@ -111,12 +109,13 @@ int close_port()
     return 0;
 }
 
-void send_frames() {
+void send_frames()
+{
     struct can_frame frame;
 
     frame.can_id = 0x18FFA017 | CAN_EFF_FLAG;
     frame.can_dlc = 8;
-    for (int i=0; i<8; i++)
+    for (int i = 0; i < 8; i++)
         frame.data[i] = i;
 
     while (is_running) {
@@ -128,8 +127,9 @@ void send_frames() {
     }
 }
 
-void signal_handler(int s) {
-    printf("caught signal %d\n", s);
+void signal_handler(int s)
+{
+    printf("\ncaught signal %d\n", s);
     is_running = false;
     //exit(1);
 }
@@ -148,9 +148,9 @@ int main(void)
 
     printf("socketcan test\n");
     open_port("can0");
-    
+
     std::thread publisher(&send_frames);
-    
+
     read_port();
 
     publisher.join();
