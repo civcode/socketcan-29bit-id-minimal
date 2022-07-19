@@ -1,6 +1,7 @@
 /* A simple SocketCAN example */
 
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -15,7 +16,8 @@
 #include <thread>
 
 int soc;
-int read_can_port;
+//int read_can_port;
+bool is_running;
 
 int open_port(const char *port)
 {
@@ -68,15 +70,17 @@ void read_port()
 
     memset(frame_rd.data, 0, sizeof(frame_rd.data));
 
-    read_can_port = 1;
-    while (read_can_port) {
+    //read_can_port = 1;
+    //while (read_can_port) {
+    while (is_running) {
         struct timeval timeout = {1, 0};
         fd_set readSet;
         FD_ZERO(&readSet);
         FD_SET(soc, &readSet);
 
         if (select((soc + 1), &readSet, NULL, NULL, &timeout) >= 0) {
-            if (!read_can_port) {
+            //if (!read_can_port) {
+            if (!is_running) {
                 break;
             }
             if (FD_ISSET(soc, &readSet)) {
@@ -117,7 +121,7 @@ void send_frames() {
     for (int i=0; i<8; i++)
         frame.data[i] = i;
 
-    while (1) {
+    while (is_running) {
         int ret = send_port(&frame);
         if (ret < 0) {
             printf("error - could not send frame\n");
@@ -126,8 +130,24 @@ void send_frames() {
     }
 }
 
+void signal_handler(int s) {
+    printf("caught signal %d\n", s);
+    is_running = false;
+    //exit(1);
+}
+
 int main(void)
 {
+    is_running = true;
+
+    struct sigaction sigIntHandler;
+
+    sigIntHandler.sa_handler = signal_handler;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+
+    sigaction(SIGINT, &sigIntHandler, NULL);
+
     printf("socketcan test\n");
     open_port("can0");
     
@@ -136,6 +156,11 @@ int main(void)
     read_port();
 
     publisher.join();
+    printf("publisher thread joined\n");
+    close_port();
+    printf("socket closed\n");
+
+    printf("exiting\n");
 
     return 0;
 }
