@@ -12,12 +12,16 @@
 #include <linux/can/raw.h>
 #include <net/if.h>
 
+#include <cstdint>
 #include <chrono>
+#include <mutex>
 #include <thread>
 
 int soc;
 //int read_can_port;
 bool is_running;
+std::mutex mtx;
+
 
 int open_port(const char *port)
 {
@@ -58,6 +62,17 @@ int send_port(struct can_frame *frame)
     if (retval != sizeof(struct can_frame)) {
         return (-1);
     } else {
+        auto print_frame = [](struct can_frame frame) {
+            mtx.lock();
+            printf("TX id = 0x%08X,  dlc = %d, data = 0x ", frame.can_id, frame.can_dlc);
+            for (int i=0; i<8; i++) {
+                //printf("%.2X ", frame.data[i]);
+                printf("%02X ", frame.data[i]);
+            }
+            printf("\n");
+            mtx.unlock();
+        };
+        print_frame(*frame);
         return (0);
     }
 }
@@ -91,13 +106,14 @@ void read_port()
                     frame_rd.can_id &= 0x1FFFFFFF;
                     //frame_rd.can_id &= CAN_EFF_FLAG;
                     auto print_frame = [](struct can_frame frame) {
-                        printf("id = 0x%08X,  dlc = %d, data = 0x ", frame.can_id, frame.can_dlc);
+                        mtx.lock();
+                        printf("RX id = 0x%08X,  dlc = %d, data = 0x ", frame.can_id, frame.can_dlc);
                         for (int i=0; i<8; i++) {
                             //printf("%.2X ", frame.data[i]);
                             printf("%02X ", frame.data[i]);
                         }
                         printf("\n");
-
+                        mtx.unlock();
                     };
                     print_frame(frame_rd);
                     
@@ -121,12 +137,17 @@ void send_frames() {
     for (int i=0; i<8; i++)
         frame.data[i] = i;
 
+    uint32_t cnt = 0;
     while (is_running) {
+
+        //frame.can_id = 0x18FFA000 | CAN_EFF_FLAG;
+        //frame.can_id += cnt++%255;
+
         int ret = send_port(&frame);
         if (ret < 0) {
             printf("error - could not send frame\n");
         }
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
