@@ -88,10 +88,8 @@ void read_port()
                 if (recvbytes) {
                     bool is_extended_frame = frame_rd.can_id & CAN_EFF_FLAG;
                     //printf("is extended frame: %d\n", (int)is_extended_frame);
-                    frame_rd.can_id &= 0x1FFFFFFF;
-                    //frame_rd.can_id &= CAN_EFF_FLAG;
                     auto print_frame = [](struct can_frame frame) {
-                        printf("id = 0x%08X,  dlc = %d, data = 0x ", frame.can_id, frame.can_dlc);
+                        printf("id = 0x%08X,  dlc = %d, data = 0x ", frame.can_id & 0x1FFFFFFFu, frame.can_dlc);
                         for (int i=0; i<8; i++) {
                             //printf("%.2X ", frame.data[i]);
                             printf("%02X ", frame.data[i]);
